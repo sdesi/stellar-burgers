@@ -6,6 +6,27 @@ const URL = process.env.BURGER_API_URL;
 const checkResponse = <T>(res: Response): Promise<T> =>
   res.ok ? res.json() : res.json().then((err) => Promise.reject(err));
 
+const catchError = (error: unknown): Promise<never> => {
+  if (error instanceof Error) {
+    return Promise.reject(error);
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string'
+  ) {
+    return Promise.reject(new Error(error.message));
+  }
+
+  if (typeof error === 'string') {
+    return Promise.reject(new Error(error));
+  }
+
+  return Promise.reject(new Error('Произошла ошибка'));
+};
+
 type TServerResponse<T> = {
   success: boolean;
 } & T;
@@ -33,7 +54,8 @@ export const refreshToken = (): Promise<TRefreshResponse> =>
       localStorage.setItem('refreshToken', refreshData.refreshToken);
       setCookie('accessToken', refreshData.accessToken);
       return refreshData;
-    });
+    })
+    .catch(catchError);
 
 export const fetchWithRefresh = async <T>(
   url: RequestInfo,
@@ -51,9 +73,9 @@ export const fetchWithRefresh = async <T>(
       }
       const res = await fetch(url, options);
       return await checkResponse<T>(res);
-    } else {
-      return Promise.reject(err);
     }
+
+    return catchError(err);
   }
 };
 
@@ -77,7 +99,8 @@ export const getIngredientsApi = () =>
     .then((data) => {
       if (data?.success) return data.data;
       return Promise.reject(data);
-    });
+    })
+    .catch(catchError);
 
 export const getFeedsApi = () =>
   fetch(`${URL}/orders/all`)
@@ -85,7 +108,8 @@ export const getFeedsApi = () =>
     .then((data) => {
       if (data?.success) return data;
       return Promise.reject(data);
-    });
+    })
+    .catch(catchError);
 
 export const getOrdersApi = () =>
   fetchWithRefresh<TFeedsResponse>(`${URL}/orders`, {
@@ -94,10 +118,12 @@ export const getOrdersApi = () =>
       'Content-Type': 'application/json;charset=utf-8',
       authorization: getCookie('accessToken')
     } as HeadersInit
-  }).then((data) => {
-    if (data?.success) return data.orders;
-    return Promise.reject(data);
-  });
+  })
+    .then((data) => {
+      if (data?.success) return data.orders;
+      return Promise.reject(data);
+    })
+    .catch(catchError);
 
 type TOwner = {
   name: string;
@@ -132,10 +158,12 @@ export const orderBurgerApi = (data: string[]) =>
     body: JSON.stringify({
       ingredients: data
     })
-  }).then((data) => {
-    if (data?.success) return data;
-    return Promise.reject(data);
-  });
+  })
+    .then((responseData) => {
+      if (responseData?.success) return responseData;
+      return Promise.reject(responseData);
+    })
+    .catch(catchError);
 
 type TOrderResponse = TServerResponse<{
   orders: TOrder[];
@@ -147,7 +175,9 @@ export const getOrderByNumberApi = (number: number) =>
     headers: {
       'Content-Type': 'application/json'
     }
-  }).then((res) => checkResponse<TOrderResponse>(res));
+  })
+    .then((res) => checkResponse<TOrderResponse>(res))
+    .catch(catchError);
 
 export type TRegisterData = {
   email: string;
@@ -170,10 +200,11 @@ export const registerUserApi = (data: TRegisterData) =>
     body: JSON.stringify(data)
   })
     .then((res) => checkResponse<TAuthResponse>(res))
-    .then((data) => {
-      if (data?.success) return data;
-      return Promise.reject(data);
-    });
+    .then((responseData) => {
+      if (responseData?.success) return responseData;
+      return Promise.reject(responseData);
+    })
+    .catch(catchError);
 
 export type TLoginData = {
   email: string;
@@ -189,10 +220,11 @@ export const loginUserApi = (data: TLoginData) =>
     body: JSON.stringify(data)
   })
     .then((res) => checkResponse<TAuthResponse>(res))
-    .then((data) => {
-      if (data?.success) return data;
-      return Promise.reject(data);
-    });
+    .then((responseData) => {
+      if (responseData?.success) return responseData;
+      return Promise.reject(responseData);
+    })
+    .catch(catchError);
 
 export const forgotPasswordApi = (data: { email: string }) =>
   fetch(`${URL}/password-reset`, {
@@ -203,10 +235,11 @@ export const forgotPasswordApi = (data: { email: string }) =>
     body: JSON.stringify(data)
   })
     .then((res) => checkResponse<TServerResponse<{}>>(res))
-    .then((data) => {
-      if (data?.success) return data;
-      return Promise.reject(data);
-    });
+    .then((responseData) => {
+      if (responseData?.success) return responseData;
+      return Promise.reject(responseData);
+    })
+    .catch(catchError);
 
 export const resetPasswordApi = (data: { password: string; token: string }) =>
   fetch(`${URL}/password-reset/reset`, {
@@ -217,10 +250,11 @@ export const resetPasswordApi = (data: { password: string; token: string }) =>
     body: JSON.stringify(data)
   })
     .then((res) => checkResponse<TServerResponse<{}>>(res))
-    .then((data) => {
-      if (data?.success) return data;
-      return Promise.reject(data);
-    });
+    .then((responseData) => {
+      if (responseData?.success) return responseData;
+      return Promise.reject(responseData);
+    })
+    .catch(catchError);
 
 type TUserResponse = TServerResponse<{ user: TUser }>;
 
@@ -229,7 +263,7 @@ export const getUserApi = () =>
     headers: {
       authorization: getCookie('accessToken')
     } as HeadersInit
-  });
+  }).catch(catchError);
 
 export const updateUserApi = (user: Partial<TRegisterData>) =>
   fetchWithRefresh<TUserResponse>(`${URL}/auth/user`, {
@@ -239,7 +273,7 @@ export const updateUserApi = (user: Partial<TRegisterData>) =>
       authorization: getCookie('accessToken')
     } as HeadersInit,
     body: JSON.stringify(user)
-  });
+  }).catch(catchError);
 
 export const logoutApi = () =>
   fetch(`${URL}/auth/logout`, {
@@ -250,4 +284,6 @@ export const logoutApi = () =>
     body: JSON.stringify({
       token: localStorage.getItem('refreshToken')
     })
-  }).then((res) => checkResponse<TServerResponse<{}>>(res));
+  })
+    .then((res) => checkResponse<TServerResponse<{}>>(res))
+    .catch(catchError);
