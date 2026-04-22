@@ -91,7 +91,13 @@
     "build-storybook": "storybook build",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx ./src",
     "lint:fix": "npm run lint -- --fix",
-    "format": "prettier ./src --write"
+    "format": "prettier ./src --write",
+    "build": "webpack --mode=production",
+    "test": "node ./node_modules/jest/bin/jest.js",
+    "test:watch": "node ./node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node ./node_modules/jest/bin/jest.js --coverage",
+    "cypress:open": "node ./node_modules/cypress/bin/cypress open",
+    "cypress:run": "node ./node_modules/cypress/bin/cypress run"
   },
   "eslintConfig": {
     "extends": [
