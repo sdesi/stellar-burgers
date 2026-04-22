@@ -1,3 +1,5 @@
+import '../support/commands';
+
 const selectors = {
   modalTitle: 'Детали ингредиента',
   orderButton: 'Оформить заказ',
@@ -53,10 +55,12 @@ describe('Страница конструктора бургера', () => {
     addIngredientByName(ingredientNames.main);
     addIngredientByName(ingredientNames.sauce);
 
-    cy.contains(`${ingredientNames.bun} (верх)`).should('exist');
-    cy.contains(`${ingredientNames.bun} (низ)`).should('exist');
-    cy.contains(ingredientNames.main).should('exist');
-    cy.contains(ingredientNames.sauce).should('exist');
+    cy.getBurgerConstructor().within(() => {
+      cy.contains(`${ingredientNames.bun} (верх)`).should('exist');
+      cy.contains(`${ingredientNames.bun} (низ)`).should('exist');
+      cy.contains(ingredientNames.main).should('exist');
+      cy.contains(ingredientNames.sauce).should('exist');
+    });
   });
 
   it('открывает модальное окно ингредиента и закрывает его по крестику', () => {
